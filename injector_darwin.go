@@ -7,9 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/atotto/clipboard"
+)
+
+// Mac ke liye window states
+const (
+	SW_MINIMIZE = 6
+	SW_RESTORE  = 9
 )
 
 func injectText(text string, startDelaySec int, charDelayMs int, sebOnly bool, onStatus func(string)) error {
@@ -39,7 +46,7 @@ func injectText(text string, startDelaySec int, charDelayMs int, sebOnly bool, o
 		onStatus("⌨️  Pasting text via Mac Accessibility...")
 	}
 
-	// 3. Mac me Cmd+V simulate karna (AppleScript ke through)
+	// 3. Mac me Cmd+V simulate karna
 	script := `tell application "System Events" to keystroke "v" using command down`
 	cmd := exec.Command("osascript", "-e", script)
 	err = cmd.Run()
@@ -59,7 +66,44 @@ func injectText(text string, startDelaySec int, charDelayMs int, sebOnly bool, o
 	return nil
 }
 
-// Mac par window tools abhi available nahi hain, isliye khali functions
-func findSEBWindow() uintptr { return 0 }
-func showWindow(hwnd uintptr, cmd int) {}
-func setForeground(hwnd uintptr) {}
+// ==========================================
+// MAC WINDOW MANAGEMENT (AppleScript)
+// ==========================================
+
+// SEB ki window check karta hai
+func findSEBWindow() uintptr {
+	script := `tell application "System Events" to return exists (process "Safe Exam Browser")`
+	cmd := exec.Command("osascript", "-e", script)
+	out, _ := cmd.Output()
+	if strings.TrimSpace(string(out)) == "true" {
+		return 1 // Return 1 matlab SEB mil gaya
+	}
+	return 0
+}
+
+// Window ko minimize ya restore karta hai
+func showWindow(hwnd uintptr, cmd int) {
+	if hwnd == 0 {
+		return
+	}
+
+	if cmd == SW_MINIMIZE {
+		// SEB ko hide karo (Minimize)
+		script := `tell application "System Events" to set visible of process "Safe Exam Browser" to false`
+		exec.Command("osascript", "-e", script).Run()
+	} else if cmd == SW_RESTORE {
+		// SEB ko wapas dikhao
+		script := `tell application "System Events" to set visible of process "Safe Exam Browser" to true`
+		exec.Command("osascript", "-e", script).Run()
+	}
+}
+
+// SEB ko foreground me laata hai
+func setForeground(hwnd uintptr) {
+	if hwnd == 0 {
+		return
+	}
+	// SEB ko activate karo (saamne lao)
+	script := `tell application "Safe Exam Browser" to activate`
+	exec.Command("osascript", "-e", script).Run()
+}
