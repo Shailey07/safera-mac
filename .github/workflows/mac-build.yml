@@ -10,12 +10,15 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21'
+
+      - name: Download dependencies
+        run: go mod tidy
 
       - name: Install Fyne
         run: go install fyne.io/tools/cmd/fyne@latest
@@ -23,10 +26,10 @@ jobs:
       - name: Build Mac App
         run: |
           export CGO_ENABLED=1
-          fyne package -os darwin -icon resources/icon.png -name SafeEra -app-id com.safera.app
-          
+          fyne package -os darwin -icon resources/seb-logo.png -name SafeEra -app-id com.safera.app
+
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: SafeEra-Mac
           path: SafeEra.app
